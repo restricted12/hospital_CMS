@@ -102,5 +102,15 @@ export const prescriptionService = {
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to fetch prescription statistics' };
     }
+  },
+
+  // Get pharmacy statistics
+  getPharmacyStats: async () => {
+    try {
+      const response = await api.get('/pharmacy/stats');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to fetch pharmacy statistics' };
+    }
   }
 };

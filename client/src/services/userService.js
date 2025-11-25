@@ -51,6 +51,16 @@ export const userService = {
     }
   },
 
+  // Create user (admin only)
+  createUser: async (userData) => {
+    try {
+      const response = await api.post('/auth/register', userData);
+      return { success: true, data: response.data.data.user };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to create user' };
+    }
+  },
+
   // Get users by role (admin only)
   getUsersByRole: async (role) => {
     try {

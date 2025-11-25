@@ -41,19 +41,34 @@ const MainDoctorDashboard = () => {
       // Load visits with lab results
       const visitsResult = await visitService.getVisitsWithLabResults();
       if (visitsResult.success) {
-        setVisitsWithLabResults(visitsResult.data);
+        const visits = Array.isArray(visitsResult.data) ? visitsResult.data : [];
+        setVisitsWithLabResults(visits);
       }
 
-      // Load my prescriptions
-      const prescriptionsResult = await prescriptionService.getPrescriptions();
+      // Load prescriptions (fetch all to ensure visibility)
+      const prescriptionsResult = await prescriptionService.getPrescriptions({ all: true });
       if (prescriptionsResult.success) {
-        setPrescriptions(prescriptionsResult.data.prescriptions);
+        const prescriptions = Array.isArray(prescriptionsResult.data.prescriptions) ? prescriptionsResult.data.prescriptions : [];
+        setPrescriptions(prescriptions);
       }
 
       // Load stats
       const statsResult = await prescriptionService.getPrescriptionStats();
       if (statsResult.success) {
-        setStats(statsResult.data);
+        const statsData = statsResult.data;
+        setStats({
+          pendingDiagnoses: visitsResult.success ? (Array.isArray(visitsResult.data) ? visitsResult.data.length : 0) : 0,
+          prescriptionsWritten: statsData.totalPrescriptions || 0,
+          todayVisits: statsData.todayPrescriptions || 0,
+          completedDiagnoses: statsData.statusStats?.find(s => s._id === 'dispensed')?.count || 0
+        });
+      } else {
+        setStats({
+          pendingDiagnoses: visitsResult.success ? (Array.isArray(visitsResult.data) ? visitsResult.data.length : 0) : 0,
+          prescriptionsWritten: 0,
+          todayVisits: 0,
+          completedDiagnoses: 0
+        });
       }
 
     } catch (error) {
@@ -455,7 +470,7 @@ const MainDoctorDashboard = () => {
                               onClick={() => removeMedicine(index)}
                               disabled={prescriptionForm.medicines.length === 1}
                             >
-                              <FaTimes />
+                              
                             </Button>
                           </Form.Group>
                         </Col>

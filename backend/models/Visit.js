@@ -29,23 +29,11 @@ const visitSchema = new mongoose.Schema({
   },
   checkerDoctor: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    validate: {
-      validator: function(v) {
-        return !v || this.checkerDoctorRole === 'checkerDoctor';
-      },
-      message: 'Checker doctor must have checkerDoctor role'
-    }
+    ref: 'User'
   },
   mainDoctor: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    validate: {
-      validator: function(v) {
-        return !v || this.mainDoctorRole === 'mainDoctor';
-      },
-      message: 'Main doctor must have mainDoctor role'
-    }
+    ref: 'User'
   },
   labTests: [{
     type: mongoose.Schema.Types.ObjectId,

@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const { body, validationResult } = require('express-validator');
 const Prescription = require('../models/Prescription');
 const Visit = require('../models/Visit');
@@ -15,13 +16,31 @@ router.get('/visits/lab-done', [
   authorize('mainDoctor')
 ], async (req, res) => {
   try {
-    const visits = await Visit.find({
-      status: 'lab_done'
-    })
+    // Primary: visits already marked lab_done
+    const labDoneVisits = await Visit.find({ status: 'lab_done' })
       .populate('patient', 'firstName lastName gender age contact')
       .populate('checkerDoctor', 'fullName role')
       .populate('labTests', 'testName result fileUrl isCompleted')
       .sort({ visitDate: 1 });
+
+    // Fallback: visits still in lab_pending but all lab tests are completed
+    const pendingVisits = await Visit.find({ status: 'lab_pending' })
+      .populate('patient', 'firstName lastName gender age contact')
+      .populate('checkerDoctor', 'fullName role')
+      .populate('labTests', 'testName result fileUrl isCompleted')
+      .sort({ visitDate: 1 });
+
+    const fullyReadyPending = pendingVisits.filter(v => Array.isArray(v.labTests) && v.labTests.length > 0 && v.labTests.every(t => t?.isCompleted === true));
+
+    // Deduplicate by visit id in case of status race conditions
+    const visitById = new Map();
+    for (const v of [...labDoneVisits, ...fullyReadyPending]) {
+      if (v && v._id) visitById.set(v._id.toString(), v);
+    }
+    const visits = Array.from(visitById.values());
+
+    // Temporary debug logs (can be removed later)
+    console.log('[lab-done] labDone=', labDoneVisits.length, 'pending=', pendingVisits.length, 'readyPending=', fullyReadyPending.length, 'final=', visits.length);
 
     res.status(200).json({
       success: true,
@@ -180,10 +199,16 @@ router.post('/', [
 // @desc    Get prescription for visit
 // @route   GET /api/prescriptions/:visitId
 // @access  Private
-router.get('/:visitId', [
+router.get('/:visitId([0-9a-fA-F]{24})', [
   protect
 ], async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.visitId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid visit id'
+      });
+    }
     const prescription = await Prescription.findOne({ visit: req.params.visitId })
       .populate('visit', 'visitNumber visitDate')
       .populate({
@@ -235,8 +260,8 @@ router.get('/', [
       filter.pharmacyStatus = req.query.pharmacyStatus;
     }
 
-    // Role-based filtering
-    if (req.user.role === 'mainDoctor') {
+    // Role-based filtering (allow main doctor to fetch all if all=true)
+    if (req.user.role === 'mainDoctor' && req.query.all !== 'true') {
       filter.mainDoctor = req.user._id;
     }
 

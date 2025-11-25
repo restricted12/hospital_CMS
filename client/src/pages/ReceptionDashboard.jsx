@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Table, Badge, Modal, Form, Alert, Spinner } from 'react-bootstrap';
-import { FaPlus, FaEye, FaEdit, FaUserPlus, FaCalendarPlus, FaDollarSign, FaSearch } from 'react-icons/fa';
+import { FaPlus, FaEye, FaEdit, FaUserPlus, FaCalendarPlus, FaDollarSign, FaSearch, FaClipboardList, FaMoneyBillWave } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { patientService } from '../services/patientService';

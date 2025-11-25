@@ -39,19 +39,34 @@ const LabDashboard = () => {
       // Load pending lab tests
       const pendingResult = await labService.getPendingLabTests();
       if (pendingResult.success) {
-        setPendingTests(pendingResult.data);
+        const pending = Array.isArray(pendingResult.data) ? pendingResult.data : [];
+        setPendingTests(pending);
       }
 
       // Load completed lab tests
       const completedResult = await labService.getCompletedLabTests();
       if (completedResult.success) {
-        setCompletedTests(completedResult.data);
+        const completed = Array.isArray(completedResult.data) ? completedResult.data : [];
+        setCompletedTests(completed);
       }
 
       // Load stats
       const statsResult = await labService.getLabStats();
       if (statsResult.success) {
-        setStats(statsResult.data);
+        const statsData = statsResult.data;
+        setStats({
+          pendingTests: statsData.pendingTests || 0,
+          completedToday: statsData.todayTests || 0,
+          totalTests: statsData.totalTests || 0,
+          averageTime: 0 // This would need to be calculated based on completion times
+        });
+      } else {
+        setStats({
+          pendingTests: 0,
+          completedToday: 0,
+          totalTests: 0,
+          averageTime: 0
+        });
       }
 
     } catch (error) {
@@ -305,7 +320,7 @@ const LabDashboard = () => {
                           <FaEye />
                         </Button>
                         <Button variant="outline-secondary" size="sm">
-                          <FaEdit />
+                          
                         </Button>
                       </td>
                     </tr>

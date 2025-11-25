@@ -49,25 +49,41 @@ const PharmacyDashboard = () => {
       // Load pending prescriptions
       const pendingResult = await prescriptionService.getPendingPrescriptions();
       if (pendingResult.success) {
-        setPendingPrescriptions(pendingResult.data);
+        const pending = Array.isArray(pendingResult.data.prescriptions) ? pendingResult.data.prescriptions : [];
+        setPendingPrescriptions(pending);
       }
 
       // Load all prescriptions
       const prescriptionsResult = await prescriptionService.getPrescriptions();
       if (prescriptionsResult.success) {
-        setDispensedPrescriptions(prescriptionsResult.data.prescriptions.filter(p => p.pharmacyStatus === 'dispensed'));
+        const prescriptions = Array.isArray(prescriptionsResult.data.prescriptions) ? prescriptionsResult.data.prescriptions : [];
+        setDispensedPrescriptions(prescriptions.filter(p => p.pharmacyStatus === 'dispensed'));
       }
 
       // Load medicines
       const medicinesResult = await medicineService.getMedicines();
       if (medicinesResult.success) {
-        setMedicines(medicinesResult.data.medicines);
+        const medicines = Array.isArray(medicinesResult.data.medicines) ? medicinesResult.data.medicines : [];
+        setMedicines(medicines);
       }
 
       // Load stats
       const statsResult = await prescriptionService.getPharmacyStats();
       if (statsResult.success) {
-        setStats(statsResult.data);
+        const statsData = statsResult.data;
+        setStats({
+          pendingPrescriptions: statsData.pendingPrescriptions || 0,
+          dispensedToday: statsData.todayDispensed || 0,
+          totalMedicines: medicinesResult.success ? (Array.isArray(medicinesResult.data.medicines) ? medicinesResult.data.medicines.length : 0) : 0,
+          lowStockMedicines: statsData.lowStockMedicines?.length || 0
+        });
+      } else {
+        setStats({
+          pendingPrescriptions: 0,
+          dispensedToday: 0,
+          totalMedicines: medicinesResult.success ? (Array.isArray(medicinesResult.data.medicines) ? medicinesResult.data.medicines.length : 0) : 0,
+          lowStockMedicines: 0
+        });
       }
 
     } catch (error) {

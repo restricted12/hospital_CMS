@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Table, Badge, Modal, Form, Alert, Spinner } from 'react-bootstrap';
-import { FaStethoscope, FaFlask, FaEye, FaEdit, FaCheck, FaTimes, FaSearch } from 'react-icons/fa';
+import { FaStethoscope, FaFlask, FaEye, FaEdit, FaCheck, FaTimes, FaSearch, FaBell } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { visitService } from '../services/visitService';
-import { labService } from '../services/labService';
+import { useWebSocket } from '../context/WebSocketContext';
 
 const CheckerDoctorDashboard = () => {
   const navigate = useNavigate();
+  const { socket, isConnected } = useWebSocket();
   const [loading, setLoading] = useState(true);
-  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);        
   const [showLabOrderModal, setShowLabOrderModal] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState(null);
+  const [newVisitNotification, setNewVisitNotification] = useState(null);
   
   // Data states
   const [pendingVisits, setPendingVisits] = useState([]);
@@ -59,16 +61,42 @@ const CheckerDoctorDashboard = () => {
     loadDashboardData();
   }, []);
 
+  // WebSocket event listeners
+  useEffect(() => {
+    if (socket) {
+      // Listen for new visit notifications
+      socket.on('new-visit', (data) => {
+        console.log('New visit received:', data);
+        setNewVisitNotification(data.visit);
+        
+        // Show toast notification
+        toast.info(`New patient visit: ${data.visit.patient.firstName} ${data.visit.patient.lastName}`, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Refresh the dashboard data
+        loadDashboardData();
+      });
+
+      // Cleanup listeners on unmount
+      return () => {
+        socket.off('new-visit');
+      };
+    }
+  }, [socket]);
+
   const loadDashboardData = async () => {
     setLoading(true);
     try {
       // Load pending visits for checker doctor
       const pendingResult = await visitService.getPendingVisits();
       if (pendingResult.success) {
-        // Ensure data is an array
-        const visits = Array.isArray(pendingResult.data) ? pendingResult.data : 
-                     Array.isArray(pendingResult.data?.visits) ? pendingResult.data.visits : 
-                     [];
+        const visits = Array.isArray(pendingResult.data) ? pendingResult.data : [];
         setPendingVisits(visits);
         console.log('Pending visits loaded:', visits);
       } else {
@@ -79,10 +107,7 @@ const CheckerDoctorDashboard = () => {
       // Load my visits
       const myVisitsResult = await visitService.getCheckerDoctorVisits();
       if (myVisitsResult.success) {
-        // Ensure data is an array
-        const visits = Array.isArray(myVisitsResult.data) ? myVisitsResult.data : 
-                     Array.isArray(myVisitsResult.data?.visits) ? myVisitsResult.data.visits : 
-                     [];
+        const visits = Array.isArray(myVisitsResult.data) ? myVisitsResult.data : [];
         setMyVisits(visits);
         console.log('My visits loaded:', visits);
       } else {
@@ -93,11 +118,35 @@ const CheckerDoctorDashboard = () => {
       // Load stats
       const statsResult = await visitService.getCheckerDoctorStats();
       if (statsResult.success) {
-        setStats(statsResult.data);
+        const statsData = statsResult.data;
+        setStats({
+          pendingVisits: pendingResult.success ? (Array.isArray(pendingResult.data) ? pendingResult.data.length : 0) : 0,
+          todayChecked: statsData.todayVisits || 0,
+          labOrdersSent: statsData.statusStats?.find(s => s._id === 'lab_pending')?.count || 0,
+          directDiagnoses: statsData.statusStats?.find(s => s._id === 'checked')?.count || 0
+        });
+      } else {
+        // Set default stats if API fails
+        setStats({
+          pendingVisits: pendingResult.success ? (Array.isArray(pendingResult.data) ? pendingResult.data.length : 0) : 0,
+          todayChecked: 0,
+          labOrdersSent: 0,
+          directDiagnoses: 0
+        });
       }
 
     } catch (error) {
+      console.error('Error loading dashboard data:', error);
       toast.error('Failed to load dashboard data');
+      // Set default stats on error
+      setStats({
+        pendingVisits: 0,
+        todayChecked: 0,
+        labOrdersSent: 0,
+        directDiagnoses: 0
+      });
+      setPendingVisits([]);
+      setMyVisits([]);
     } finally {
       setLoading(false);
     }
@@ -194,10 +243,44 @@ const CheckerDoctorDashboard = () => {
     <Container fluid>
       <Row className="mb-4">
         <Col>
-          <h2 className="fw-bold text-dark">Checker Doctor Dashboard</h2>
-          <p className="text-muted">Initial patient assessment and lab test ordering</p>
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <h2 className="fw-bold text-dark">Checker Doctor Dashboard</h2>       
+              <p className="text-muted">Initial patient assessment and lab test ordering</p>
+            </div>
+            <Button 
+              variant="outline-primary" 
+              onClick={loadDashboardData}
+              disabled={loading}
+            >
+              <FaSearch className="me-1" />
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          </div>
         </Col>
       </Row>
+
+      {/* WebSocket Connection Status */}
+      <Row className="mb-3">
+        <Col>
+          <Alert variant={isConnected ? "success" : "warning"} className="mb-0">
+            <FaBell className="me-2" />
+            {isConnected ? "Real-time updates enabled" : "Connecting to real-time updates..."}
+          </Alert>
+        </Col>
+      </Row>
+
+      {/* New Visit Notification */}
+      {newVisitNotification && (
+        <Row className="mb-3">
+          <Col>
+            <Alert variant="info" dismissible onClose={() => setNewVisitNotification(null)}>
+              <FaBell className="me-2" />
+              <strong>New Patient Visit:</strong> {newVisitNotification.patient.firstName} {newVisitNotification.patient.lastName} - {newVisitNotification.complaint.substring(0, 50)}...
+            </Alert>
+          </Col>
+        </Row>
+      )}
 
       {/* Quick Stats */}
       <Row className="mb-4">

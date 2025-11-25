@@ -32,13 +32,8 @@ const labTestSchema = new mongoose.Schema({
   performedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'Performed by field is required'],
-    validate: {
-      validator: function(v) {
-        return this.performedByRole === 'labTech';
-      },
-      message: 'Performed by must have labTech role'
-    }
+    // Only required once a test is completed (set by lab tech during result upload)
+    required: function() { return this.isCompleted === true; }
   },
   isCompleted: {
     type: Boolean,

@@ -25,7 +25,7 @@ export const labService = {
   getPendingLabTests: async () => {
     try {
       const response = await api.get('/labs/pending');
-      return { success: true, data: response.data.data };
+      return { success: true, data: response.data.data.labTests || [] };
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to fetch pending lab tests' };
     }
@@ -35,24 +35,15 @@ export const labService = {
   getCompletedLabTests: async (params = {}) => {
     try {
       const response = await api.get('/labs/completed', { params });
-      return { success: true, data: response.data.data };
+      return { success: true, data: response.data.data.labTests || [] };
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to fetch completed lab tests' };
     }
   },
 
   // Upload lab test result
-  uploadLabResult: async (id, resultData) => {
+  uploadResult: async (id, formData) => {
     try {
-      const formData = new FormData();
-      formData.append('result', resultData.result);
-      if (resultData.notes) {
-        formData.append('notes', resultData.notes);
-      }
-      if (resultData.file) {
-        formData.append('resultFile', resultData.file);
-      }
-
       const response = await api.put(`/labs/${id}/result`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',

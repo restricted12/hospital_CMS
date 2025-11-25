@@ -112,6 +112,10 @@ router.put('/:id', [
       .isEmail()
       .withMessage('Please provide a valid email')
       .normalizeEmail(),
+    body('password')
+      .optional()
+      .isLength({ min: 6 })
+      .withMessage('Password must be at least 6 characters'),
     body('role')
       .optional()
       .isIn(['admin', 'reception', 'checkerDoctor', 'mainDoctor', 'labTech', 'pharmacy'])
@@ -133,11 +137,12 @@ router.put('/:id', [
       });
     }
 
-    const { fullName, email, role, isActive } = req.body;
+    const { fullName, email, password, role, isActive } = req.body;
     const updateFields = {};
 
     if (fullName) updateFields.fullName = fullName;
     if (email) updateFields.email = email;
+    if (password) updateFields.password = password;
     if (role) updateFields.role = role;
     if (isActive !== undefined) updateFields.isActive = isActive;
 

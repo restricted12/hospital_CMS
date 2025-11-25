@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const { body, validationResult } = require('express-validator');
 const LabTest = require('../models/LabTest');
 const Visit = require('../models/Visit');
@@ -68,11 +69,17 @@ router.get('/', [
 // @desc    Get single lab test
 // @route   GET /api/labs/:id
 // @access  Private (Lab Tech)
-router.get('/:id', [
+router.get('/:id([0-9a-fA-F]{24})', [
   protect,
   authorize('labTech')
 ], async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lab test id'
+      });
+    }
     const labTest = await LabTest.findById(req.params.id)
       .populate('visit', 'visitNumber visitDate')
       .populate({
@@ -109,7 +116,7 @@ router.get('/:id', [
 // @desc    Upload test result
 // @route   PUT /api/labs/:id/result
 // @access  Private (Lab Tech)
-router.put('/:id/result', [
+router.put('/:id([0-9a-fA-F]{24})/result', [
   protect,
   authorize('labTech'),
   upload.single('resultFile'),
@@ -139,7 +146,13 @@ router.put('/:id/result', [
     const { result, notes } = req.body;
     const fileUrl = req.file ? req.file.path : null;
 
-    // Check if lab test exists
+    // Validate id and check if lab test exists
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lab test id'
+      });
+    }
     const labTest = await LabTest.findById(req.params.id);
     if (!labTest) {
       return res.status(404).json({
@@ -299,7 +312,7 @@ router.get('/completed', [
 // @desc    Update lab test status
 // @route   PUT /api/labs/:id/status
 // @access  Private (Lab Tech)
-router.put('/:id/status', [
+router.put('/:id([0-9a-fA-F]{24})/status', [
   protect,
   authorize('labTech'),
   [
@@ -321,7 +334,13 @@ router.put('/:id/status', [
 
     const { isCompleted } = req.body;
 
-    // Check if lab test exists
+    // Validate id and check if lab test exists
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lab test id'
+      });
+    }
     const labTest = await LabTest.findById(req.params.id);
     if (!labTest) {
       return res.status(404).json({

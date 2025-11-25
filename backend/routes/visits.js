@@ -62,6 +62,22 @@ router.post('/', [
     // Populate the patient data in response
     await visit.populate('patient', 'firstName lastName gender age contact');
 
+    // Emit WebSocket event to notify checker doctors about new visit
+    const io = req.app.get('io');
+    if (io) {
+      io.to('checkerDoctor').emit('new-visit', {
+        visit: {
+          _id: visit._id,
+          patient: visit.patient,
+          complaint: visit.complaint,
+          visitDate: visit.visitDate,
+          status: visit.status,
+          createdAt: visit.createdAt
+        }
+      });
+      console.log('New visit notification sent to checker doctors');
+    }
+
     res.status(201).json({
       success: true,
       message: 'Visit created successfully',

@@ -7,19 +7,32 @@ const { protect, authorize } = require('../middleware/auth');
 const router = express.Router();
 
 // @desc    Get all paid patients for checking
-// @route   GET /api/visits/pending
+// @route   GET /api/checker/visits/pending
 // @access  Private (Checker Doctor)
 router.get('/visits/pending', [
   protect,
   authorize('checkerDoctor')
 ], async (req, res) => {
   try {
+    console.log('Fetching pending visits for checker doctor...');
+    
     const visits = await Visit.find({
       status: 'registered',
       paid: true
     })
       .populate('patient', 'firstName lastName gender age contact')
       .sort({ visitDate: 1 });
+
+    console.log(`Found ${visits.length} pending visits for checker doctor`);
+    
+    if (visits.length > 0) {
+      console.log('Pending visits:', visits.map(v => ({
+        id: v._id,
+        patient: v.patient?.firstName + ' ' + v.patient?.lastName,
+        status: v.status,
+        paid: v.paid
+      })));
+    }
 
     res.status(200).json({
       success: true,
@@ -38,7 +51,7 @@ router.get('/visits/pending', [
 });
 
 // @desc    Save symptoms and lab test list
-// @route   PUT /api/visits/:id/checker
+// @route   PUT /api/checker/visits/:id/checker
 // @access  Private (Checker Doctor)
 router.put('/visits/:id/checker', [
   protect,

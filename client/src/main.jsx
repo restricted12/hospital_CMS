@@ -9,6 +9,7 @@ import './index.css'
 
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
+import { WebSocketProvider } from './context/WebSocketContext.jsx'
 
 // Create a client
 const queryClient = new QueryClient({
@@ -24,21 +25,23 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter>
-          <App />
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="light"
-          />
-        </BrowserRouter>
+        <WebSocketProvider>
+          <BrowserRouter>
+            <App />
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
+          </BrowserRouter>
+        </WebSocketProvider>
       </AuthProvider>
     </QueryClientProvider>
   </React.StrictMode>,
